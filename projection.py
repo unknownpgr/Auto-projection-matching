@@ -10,23 +10,51 @@ WINDOW_TITLE = 'semtle(computer)_conference'
 FRAME_W = 1280  # Frame width
 FRAME_H = 960  # Frame hiehgt
 
-# Camera stream
-CV_CAMERA = cv2.VideoCapture(0)
+
+# Mouse click position stack
+mouseClickStack = []
+
+# Current position of mouse
+mousePosition = (0, 0)
+
+
+# mouse click callback function
+def callbackClick(event, x, y, flags, param):
+    global mousePosition
+    mousePosition = (x, y)
+    if event == cv2.EVENT_LBUTTONUP:
+        mouseClickStack.append((x, y))
+        print('point appended')
 
 
 # Camera test function. display camera input until the Q key is pressed.
 def camTest():
+    global mouseClickStack
+    mouseClickStack = []
+    cv2.namedWindow(WINDOW_TITLE)
+    cv2.setMouseCallback(WINDOW_TITLE, callbackClick)
+
+    # Camera stream
+    CV_CAMERA = cv2.VideoCapture(0)
+
     while True:
         _, img = CV_CAMERA.read()
         img = cv2.resize(img, (FRAME_W, FRAME_H))
+        cv2.circle(img, mousePosition, 32, (0, 0, 255), -1)
         cv2.imshow(WINDOW_TITLE, img)
         key = cv2.waitKey(1)
         if key is ord('q'):
             break
 
+    # Relase camera
+    CV_CAMERA.release()
+
 
 # Automatic align function.
 def align():
+
+    # Camera stream
+    CV_CAMERA = cv2.VideoCapture(0)
 
     # Display a red dot on screen and get projected position.
     def projA(x, y):
@@ -62,6 +90,11 @@ def align():
     # Project the red circle placed on the four corners of the frame.
     pointsDst = [(32, 32), (FRAME_W - 32, 32),
                  (32, FRAME_H-32), (FRAME_W-32, FRAME_H-32)]
+
+    if len(mouseClickStack) == 4:
+        print('Set custom dot position')
+        pointsDst = mouseClickStack
+
     pointsSrc = []
     cx = 0
     cy = 0
@@ -72,6 +105,9 @@ def align():
         pointsSrc.append(proj)
         cx += proj[0]
         cy += proj[1]
+
+    # Relase camera
+    CV_CAMERA.release()
 
     # Type convert
     pointsDst = np.float32(pointsDst)
@@ -95,6 +131,7 @@ video = cv2.VideoCapture(videoSource)
 # Get the video size and some constants
 ret, frame = video.read()
 h, w, _ = frame.shape
+
 h = int(h*scalar)
 w = int(w*scalar)
 h_ = int(h/2)
@@ -135,6 +172,3 @@ while True:
     key = cv2.waitKey(30)
     if key is ord('q'):
         break
-
-# Relase camera
-CV_CAMERA.release()
